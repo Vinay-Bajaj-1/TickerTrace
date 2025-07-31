@@ -1,0 +1,14 @@
+# Environments
+.env
+.venv
+
+#jupyter notebook
+*.ipynb
+
+#csvs
+*.csv
+
+#logs
+/logs
+__pycache__/
+local_data/
