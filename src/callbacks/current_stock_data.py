@@ -6,7 +6,7 @@ app_state = AppState()
 
 @callback(
     Output('current-stock-ohlcv', 'data'),
-    State('stock-select', 'value'),
+    Input('stock-select', 'value'),
     Input('date-select', 'value')
 
 )
