@@ -86,7 +86,7 @@ class ClickHouseDataFetcher(Config):
         }
 
         df = self.client.query_df(query, parameters=params)
-
+        
         if interval:
             df = df.rename(columns={"ts_bucket": "timestamp"})
         return df
