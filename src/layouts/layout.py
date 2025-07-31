@@ -5,6 +5,12 @@ from src.layouts.main_screen import left_side
 from src.callbacks.collapse_navbar import toggle_navbar
 from src.callbacks.show_date import create_date_children
 from src.callbacks.current_stock_data import load_stock_ohlcv
+from src.callbacks.play_pause import is_running, toggle_interval
+from src.callbacks.charting import update_candlestick_chart
+from src.callbacks.interval_speed import update_interval_speed
+
+
+
 from dash import dcc
 
 
@@ -49,10 +55,16 @@ final_layout = dmc.AppShell(
             p='md',
         ),
         dmc.AppShellMain(
-            'Main',
             left_side,
+            
         ),
-        dcc.Store('current-stock-ohlcv', data = {})
+        
+
+
+        dcc.Store('current-stock-ohlcv', data = {}),
+        dcc.Store('is-running', data = False),
+        dcc.Interval(id='interval-component',interval=1000, n_intervals=0),
+
 
     ],
     header={'height': 75},

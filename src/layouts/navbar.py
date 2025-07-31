@@ -16,21 +16,42 @@ nav_layout = [
                     id = 'stock-select',
                     data = app_state.list_of_all_stocks,
                     searchable=True,
-                    mb = 10
+                    mb = 20
                 ),
-                dmc.Select(
+
+                dmc.DateInput(
                     label = 'Select Date',
                     id = 'date-select',
-                    data = [],
-                    searchable=True,
-                    mb = 10
-                ),
+                    disabledDates=[],
+                    valueFormat="DD-MM-YYYY",
+                    mb = 20
+                )
             ] 
         ),
         dcc.Store('selected-date', data = None),
         dcc.Store('selected-stock', data = None),
-    ])
+    ]),
+
+    
+    dmc.Group(
+        grow = True, 
+        children = [
+            dmc.Button('Start', variant = 'filled', id = 'start-button', fullWidth = True, n_clicks = 0, mb = 20),
+            dmc.Button('Stop', variant = 'filled', id = 'stop-button', fullWidth = True,  n_clicks = 0, mb = 20),
+        ], 
+        justify = 'center'
+    ),
+
+    dmc.Select(
+        label = 'Select speed',
+        id = 'speed-select',
+        data = app_state.speed_options,
+        mb = 20
+    )
+
+    
 
 
+   
 
 ]
