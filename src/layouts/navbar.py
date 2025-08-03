@@ -45,9 +45,13 @@ nav_layout = [
     dmc.Select(
         label = 'Select speed',
         id = 'speed-select',
-        data = app_state.speed_options,
+        data = app_state.speed_options, 
+        value = '1000',
         mb = 20
-    )
+    ),
+    dmc.Button("Show Chart", id="show-chart-btn", variant="light", mt=10),
+
+
 
     
 

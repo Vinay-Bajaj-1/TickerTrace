@@ -1,101 +1,110 @@
 import pandas as pd
-from io import StringIO
-from dash import Output, Input, callback
+import plotly.graph_objects as go
+from dash import Output, Input, callback, State, no_update
 
-
-MAX_CANDLES = 375
-EXTEND_BY = 30
-start_time = pd.Timestamp('09:15')
 
 @callback(
-    Output("echarts-candlestick", "option"),  # Update echarts option property
-    Input("interval-component", "n_intervals"),
-    Input("current-stock-ohlcv", "data"),
+    Output('graph', 'figure'),
+    Output('graph', 'style'),
+    Output('chart-visible', 'data'),
+    Input('show-chart-btn', 'n_clicks'),
+    State('current-stock-ohlcv', 'data'),
+    State('candle-index', 'data'),
+    State('chart-visible', 'data'),  # current visibility state
+    prevent_initial_call=True
 )
-def update_candlestick_chart(n_intervals, ohlcv_json):
-    if not ohlcv_json:
-        # No data loaded yet, return empty option
-        return {}
+def initialize_graph(n_clicks, data, idx, currently_visible):
+    # Toggle logic: if currently visible, hide it
+    if currently_visible:
+        return go.Figure(), {'display': 'none'}, False
 
-    try:
-        # Wrap JSON string in StringIO for compatibility with read_json
-        json_buffer = StringIO(ohlcv_json)
-        df = pd.read_json(json_buffer, orient='split')
-    except Exception as e:
-        print("Failed to parse OHLCV JSON data:", e)
-        return {}
+    # If data is invalid or index out of bounds, still hide the chart
+    if not data or 'timestamp' not in data or idx is None or idx >= len(data['timestamp']):
+        return go.Figure(), {'display': 'none'}, False
 
-    # Defensive: at least show 1 candle even if n_intervals is 0 or None
-    if n_intervals is None or n_intervals < 1:
-        current_index = 1
-    else:
-        current_index = min(n_intervals, len(df))
+    # Chart is currently hidden → build and show it
+    fig = go.Figure()
+    fig.add_trace(go.Candlestick(
+        x=data['timestamp'][:idx+1],
+        open=data['open'][:idx+1],
+        high=data['high'][:idx+1],
+        low=data['low'][:idx+1],
+        close=data['close'][:idx+1],
+        increasing_line_color='green',
+        decreasing_line_color='red'
+    ))
+    fig.update_layout(
+        xaxis_rangeslider_visible=False,
+        margin=dict(t=20, b=20, l=10, r=10),
+        height=400
+    )
 
-    # Slice the dataframe up to current_index
-    df_partial = df.iloc[:current_index].copy()
-    df_partial['timestamp'] = pd.to_datetime(df_partial['timestamp'])
+    return fig, {'display': 'block'}, True
 
-    visible_len = ((len(df_partial) - 1) // EXTEND_BY + 1) * EXTEND_BY
-    time_range = [(start_time + pd.Timedelta(minutes=i)).strftime('%H:%M') for i in range(visible_len)]
-  
-    prefill_dict = {t: [None, None, None, None] for t in time_range}
 
-    for _, row in df_partial.iterrows():
-        key = row['timestamp'].strftime('%H:%M')
-        prefill_dict[key] = [
-            float(row['open']), float(row['close']),
-            float(row['low']), float(row['high'])
-        ]
 
-    x_data = list(prefill_dict.keys())
-    kline_data = list(prefill_dict.values())
 
-    option = {
-        "tooltip": {
-            "trigger": "axis",
-            "axisPointer": {"type": "cross"},
-        },
-        "xAxis": {
-            "type": "category",
-            "data": x_data ,
-            "scale": True,
-            "boundaryGap": False,
-            "axisLine": {"onZero": False},
-            "splitLine": {"show": False},
-            "min": "dataMin",
-            "max": "dataMax",
-        },
-        "yAxis": {
-            "scale": True,
-            "splitArea": {"show": True},
-        },
-        "dataZoom": [
-            {
-                "type": "inside",
-                "start": 0,
-                "end": 100,
-            },
-            {
-                "show": True,
-                "type": "slider",
-                "top": "85%",
-                "start": 0,
-                "end": 100,
-            },
-        ],
-        "series": [
-            {
-                "name": "Candlestick",
-                "type": "candlestick",
-                "data": kline_data,
-                "itemStyle": {
-                    "color": "#ec0000",      # rising candle color (red)
-                    "color0": "#00da3c",     # falling candle color (green)
-                    "borderColor": "#8A0000",
-                    "borderColor0": "#008F28",
-                },
-            }
-        ],
+@callback(
+    Output('graph', 'extendData'),
+    Output('candle-index', 'data'),
+    Input('interval-component', 'n_intervals'),
+    State('chart-visible', 'data'),
+    State('current-stock-ohlcv', 'data'),
+    State('candle-index', 'data')
+)
+def extend_chart(n_intervals, visible, data, idx):
+    if not visible or not data or idx is None:
+        return no_update, idx
+
+    idx += 1
+    timestamps = data['timestamp']
+    opens = data['open']
+    highs = data['high']
+    lows = data['low']
+    closes = data['close']
+
+    if idx >= len(timestamps):
+        return no_update, idx
+
+    new_data = {
+        'x': [[timestamps[idx]]],
+        'open': [[opens[idx]]],
+        'high': [[highs[idx]]],
+        'low': [[lows[idx]]],
+        'close': [[closes[idx]]],
     }
 
-    return option
+    return [new_data, [0]], idx + 1
+
+
+
+@callback(
+    Output('ohlc-text', 'children'),
+    Input('current-stock-ohlcv', 'data'),
+    Input('candle-index', 'data')
+)
+def update_text(data, idx):
+    if not data:
+        return no_update
+    
+    timestamps = data['timestamp']
+    if idx >= len(timestamps):
+        return no_update, idx
+    
+
+    ts = data["timestamp"][idx]
+    o = data["open"][idx]
+    h = data["high"][idx]
+    l = data["low"][idx]
+    c = data["close"][idx]
+    
+    return f"{ts} | O:{o} H:{h} L:{l} C:{c}"
+
+
+@callback(
+    Output('candle-index', 'data', allow_duplicate = True),
+    Input('interval-component', 'n_intervals'),
+    prevent_initial_call = True
+)
+def update_candle_idx(n):
+    return n
