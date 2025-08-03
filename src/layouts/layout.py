@@ -1,13 +1,15 @@
 import dash
+from dash import html
 import dash_mantine_components as dmc
 from src.layouts.navbar import nav_layout
 from src.layouts.main_screen import left_side
-from src.callbacks.collapse_navbar import toggle_navbar
-from src.callbacks.show_date import create_date_children
-from src.callbacks.current_stock_data import load_stock_ohlcv
-from src.callbacks.play_pause import is_running, toggle_interval
-from src.callbacks.charting import update_candlestick_chart
-from src.callbacks.interval_speed import update_interval_speed
+
+from src.callbacks import charting
+from src.callbacks import collapse_navbar
+from src.callbacks import current_stock_data
+from src.callbacks import interval_speed
+from src.callbacks import play_pause
+from src.callbacks import show_date
 
 
 
@@ -61,6 +63,8 @@ final_layout = dmc.AppShell(
         
 
 
+        dcc.Store(id='chart-visible', data=False),
+        dcc.Store(id='candle-index', data=0),
         dcc.Store('current-stock-ohlcv', data = {}),
         dcc.Store('is-running', data = False),
         dcc.Interval(id='interval-component',interval=1000, n_intervals=0),

@@ -58,7 +58,7 @@ class AppState:
         clickhouse_obj  = ClickHouseDataFetcher()
 
         df = clickhouse_obj.fetch_data(date, date, ticker, interval='1min')
-        json_data = df.to_json(orient='split', date_format='iso') 
+        df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')  
         clickhouse_obj.client.close()
 
-        return json_data
+        return df.to_dict(orient='list')
