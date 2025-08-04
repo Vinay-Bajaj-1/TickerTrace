@@ -13,7 +13,7 @@ left_side = [
     dmc.Stack(
         children = [
             dmc.Text("No data to show...", id = 'ohlc-text'),
-            dcc.Graph(id="graph", style = {'display' : 'none'})
+            dcc.Graph(id="graph")
         ] 
     )     
 ]

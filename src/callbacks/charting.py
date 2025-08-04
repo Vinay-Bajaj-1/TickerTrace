@@ -1,48 +1,84 @@
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from dash import Output, Input, callback, State, no_update
-
+from dash.exceptions import PreventUpdate
+from datetime import timedelta
 
 @callback(
     Output('graph', 'figure'),
-    Output('graph', 'style'),
-    Output('chart-visible', 'data'),
-    Input('show-chart-btn', 'n_clicks'),
+    Input('chart-visible', 'data'),
     State('current-stock-ohlcv', 'data'),
     State('candle-index', 'data'),
-    State('chart-visible', 'data'),  # current visibility state
     prevent_initial_call=True
 )
-def initialize_graph(n_clicks, data, idx, currently_visible):
-    # Toggle logic: if currently visible, hide it
-    if currently_visible:
-        return go.Figure(), {'display': 'none'}, False
+def initialize_graph(currently_visible, data, idx):
 
-    # If data is invalid or index out of bounds, still hide the chart
-    if not data or 'timestamp' not in data or idx is None or idx >= len(data['timestamp']):
-        return go.Figure(), {'display': 'none'}, False
+    fig = make_subplots(
+        rows=1, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.02,
+        subplot_titles=[""],
+        specs=[[{"type": "candlestick"}]]
+    )
 
-    # Chart is currently hidden → build and show it
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=data['timestamp'][:idx+1],
-        open=data['open'][:idx+1],
-        high=data['high'][:idx+1],
-        low=data['low'][:idx+1],
-        close=data['close'][:idx+1],
-        increasing_line_color='green',
-        decreasing_line_color='red'
-    ))
+    
+    if not currently_visible:
+        return fig  
+
+    
+    fig.add_trace(
+        go.Candlestick(
+            x=data['timestamp'][:idx],
+            open=data['open'][:idx],
+            high=data['high'][:idx],
+            low=data['low'][:idx],
+            close=data['close'][:idx],
+            increasing_line_color='green',
+            decreasing_line_color='red'
+        ),
+        row=1, col=1
+    )
+
+    # Setup x-axis range window from start to next 30-minute mark
+    current_ts = pd.to_datetime(data['timestamp'][idx])
+    start_timestamp = pd.to_datetime(data['timestamp'][0])
+    remainder = current_ts.minute % 30
+    end_timestamp = current_ts + timedelta(minutes=(30 - remainder))
+    end_timestamp = end_timestamp.replace(second=0, microsecond=0)
+
     fig.update_layout(
         xaxis_rangeslider_visible=False,
         margin=dict(t=20, b=20, l=10, r=10),
-        height=400
+        height=400,
+        hovermode='x unified',
+        xaxis=dict(
+            range=[start_timestamp, end_timestamp],
+            title='Time',
+            showgrid=True,
+            zeroline=False,
+            showspikes=True,
+            spikemode='across',
+            spikesnap='cursor',
+            spikethickness=1,
+            spikecolor='gray',
+            spikedash='dot'
+        ),
+        yaxis=dict(
+            autorange=True,
+            title='Price',
+            showgrid=True,
+            zeroline=False,
+            showspikes=True,
+            spikemode='across',
+            spikesnap='cursor',
+            spikethickness=1,
+            spikecolor='gray',
+            spikedash='dot'
+        )
     )
 
-    return fig, {'display': 'block'}, True
-
-
-
+    return fig
 
 @callback(
     Output('graph', 'extendData'),
@@ -56,7 +92,6 @@ def extend_chart(n_intervals, visible, data, idx):
     if not visible or not data or idx is None:
         return no_update, idx
 
-    idx += 1
     timestamps = data['timestamp']
     opens = data['open']
     highs = data['high']
@@ -77,7 +112,6 @@ def extend_chart(n_intervals, visible, data, idx):
     return [new_data, [0]], idx + 1
 
 
-
 @callback(
     Output('ohlc-text', 'children'),
     Input('current-stock-ohlcv', 'data'),
@@ -86,6 +120,8 @@ def extend_chart(n_intervals, visible, data, idx):
 def update_text(data, idx):
     if not data:
         return no_update
+    
+    idx-=1
     
     timestamps = data['timestamp']
     if idx >= len(timestamps):
@@ -100,6 +136,35 @@ def update_text(data, idx):
     
     return f"{ts} | O:{o} H:{h} L:{l} C:{c}"
 
+@callback( 
+    Output('graph', 'figure', allow_duplicate=True),
+    State('current-stock-ohlcv', 'data'),
+    Input('candle-index', 'data'),
+    State('graph', 'figure'),
+    prevent_initial_call=True
+)
+def update_xaxis(json_dict, idx, fig):
+
+    if idx is None or json_dict is None or len(json_dict) == 0 or not fig:
+        raise PreventUpdate
+    
+    if idx >= len(json_dict['timestamp']):
+        raise PreventUpdate
+
+    timestamps = json_dict['timestamp']
+    start_datetime = pd.to_datetime(timestamps[0])
+    current_ts = pd.to_datetime(timestamps[idx])
+
+    if current_ts.minute % 30 == 0 and current_ts.second == 0 or idx == 1:
+        end_datetime = current_ts + timedelta(minutes=30)
+        
+        fig['layout']['xaxis']['range'] = [start_datetime, end_datetime]
+        fig['layout']['yaxis']['autorange'] = True
+
+        return fig
+    raise PreventUpdate
+
+    
 
 @callback(
     Output('candle-index', 'data', allow_duplicate = True),
@@ -108,3 +173,14 @@ def update_text(data, idx):
 )
 def update_candle_idx(n):
     return n
+
+@callback(
+    Output('chart-visible', 'data'),
+    Input('show-chart-btn', 'n_clicks'),
+    State('chart-visible', 'data'),
+    prevent_initial_call=True
+)
+def toggle_chart_visibility(n_clicks, current_state):
+    if current_state is None:
+        return True  
+    return not current_state 
