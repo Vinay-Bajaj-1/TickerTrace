@@ -1,7 +1,6 @@
 from dash import Input, Output, State, callback, no_update
 import dash
-
-from dash import no_update
+ 
 
 @callback(
     Output('is-running', 'data'),

@@ -1,5 +1,5 @@
 import dash
-from dash import html
+from dash import html, dcc
 import dash_mantine_components as dmc
 from src.layouts.navbar import nav_layout
 from src.layouts.main_screen import left_side
@@ -11,9 +11,6 @@ from src.callbacks import interval_speed
 from src.callbacks import play_pause
 from src.callbacks import show_date
 
-
-
-from dash import dcc
 
 
 final_layout = dmc.AppShell(
@@ -57,15 +54,11 @@ final_layout = dmc.AppShell(
             p='md',
         ),
         dmc.AppShellMain(
-            left_side,
-            
+            left_side,  
         ),
-        
-
-
         dcc.Store(id='chart-visible', data=False),
         dcc.Store(id='candle-index', data=0),
-        dcc.Store('current-stock-ohlcv', data = {}),
+        dcc.Store('current-stock-ohlcv', data = None),
         dcc.Store('is-running', data = False),
         dcc.Interval(id='interval-component',interval=1000, n_intervals=0),
 
