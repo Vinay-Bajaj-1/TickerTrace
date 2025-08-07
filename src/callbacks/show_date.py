@@ -7,8 +7,6 @@ app_state = AppState()
     Output('date-select', 'disabledDates'),
     Output('date-select', 'minDate'),
     Output('date-select', 'maxDate'),
-    
-    
     Input('stock-select', 'value'),
 )
 def create_date_children(stock):

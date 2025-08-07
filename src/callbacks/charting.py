@@ -3,58 +3,81 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from dash import Output, Input, callback, State, no_update
 from dash.exceptions import PreventUpdate
-from datetime import timedelta
+from datetime import timedelta, time
 
 @callback(
     Output('graph', 'figure'),
-    Input('chart-visible', 'data'),
-    State('current-stock-ohlcv', 'data'),
+    Input('current-stock-ohlcv', 'data'),
     State('candle-index', 'data'),
+    Input('stock-select', 'value'),
+
     prevent_initial_call=True
 )
-def initialize_graph(currently_visible, data, idx):
+def initialize_graph(data, idx, stock_name):
 
-    fig = make_subplots(
-        rows=1, cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.02,
-        subplot_titles=[""],
-        specs=[[{"type": "candlestick"}]]
+    if not data:
+        raise PreventUpdate
+
+    fig = go.Figure(
+        make_subplots(
+            rows=2, cols=1,
+            shared_xaxes=True,
+            row_heights=[0.7, 0.3],
+            vertical_spacing=0.05,
+            specs=[[{"type": "candlestick"}], [{"type": "bar"}]]
+        )
     )
-
-    
-    if not currently_visible:
-        return fig  
-
-    
     fig.add_trace(
         go.Candlestick(
-            x=data['timestamp'][:idx],
-            open=data['open'][:idx],
-            high=data['high'][:idx],
-            low=data['low'][:idx],
-            close=data['close'][:idx],
+            x=[],
+            open=[],
+            high=[],
+            low=[],
+            close=[],
             increasing_line_color='green',
             decreasing_line_color='red'
         ),
         row=1, col=1
     )
-
-    # Setup x-axis range window from start to next 30-minute mark
-    current_ts = pd.to_datetime(data['timestamp'][idx])
+    colors = ['#66CDAA' if c > o else '#F08080' for o, c in zip(data['open'], data['close'])]
+    fig.add_trace(
+        go.Bar(
+            x=[],
+            y=[],
+            name='Volume',
+            marker=dict(color=colors)
+        ),
+        row=2, col=1
+    )
     start_timestamp = pd.to_datetime(data['timestamp'][0])
-    remainder = current_ts.minute % 30
-    end_timestamp = current_ts + timedelta(minutes=(30 - remainder))
-    end_timestamp = end_timestamp.replace(second=0, microsecond=0)
-
+    end_timestamp = start_timestamp + timedelta(minutes=30)
     fig.update_layout(
+        showlegend=False,
+        title=dict(
+            text=f"[{stock_name.upper()}]",
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
         xaxis_rangeslider_visible=False,
-        margin=dict(t=20, b=20, l=10, r=10),
-        height=400,
+        margin=dict(t=80, b=50, l=10, r=10),  # increased bottom margin for xaxis2 title display
+        height=700,
         hovermode='x unified',
         xaxis=dict(
+            # Remove xaxis title here (or set to empty) to avoid duplicate titles
+            title='',  
             range=[start_timestamp, end_timestamp],
-            title='Time',
+            showgrid=True,
+            zeroline=False,
+            showspikes=True,
+            spikemode='across',
+            spikesnap='cursor',
+            spikethickness=1,
+            spikecolor='gray',
+            spikedash='dot'
+        ),
+        xaxis2=dict(
+            title='Time',  # x-axis title shown below volume bars in row 2
             showgrid=True,
             zeroline=False,
             showspikes=True,
@@ -66,7 +89,7 @@ def initialize_graph(currently_visible, data, idx):
         ),
         yaxis=dict(
             autorange=True,
-            title='Price',
+            title='Price',   # y-axis title for price subplot (row 1)
             showgrid=True,
             zeroline=False,
             showspikes=True,
@@ -75,41 +98,110 @@ def initialize_graph(currently_visible, data, idx):
             spikethickness=1,
             spikecolor='gray',
             spikedash='dot'
+        ),
+        yaxis2=dict(
+            autorange=True,
+            title='Volume',  # y-axis title for volume subplot (row 2)
+            showgrid=True,
+            zeroline=False
         )
     )
 
     return fig
 
+
+@callback(
+    Output('graph', 'figure', allow_duplicate=True),
+    State('current-stock-ohlcv', 'data'),
+    Input('candle-index', 'data'),
+    State('graph', 'figure'),
+    prevent_initial_call=True
+)
+def update_xaxis(json_dict, idx, fig):
+    if idx is None or idx < 0 or not json_dict or not fig:
+        raise PreventUpdate
+
+    timestamps = json_dict.get('timestamp')
+    if not timestamps or idx >= len(timestamps):
+        raise PreventUpdate
+
+    current_ts = pd.to_datetime(timestamps[idx])
+    start_ts = pd.to_datetime(timestamps[0])
+
+    if (current_ts.minute % 30 == 0 and current_ts.second == 0) or idx == 0:
+        end_ts = current_ts + timedelta(minutes=30)
+
+        # Update range for both xaxes in subplots
+        fig['layout']['xaxis'].update({
+            'range': [start_ts, end_ts],
+            'autorange': False
+        })
+        if 'xaxis2' in fig['layout']:
+            fig['layout']['xaxis2'].update({
+                'range': [start_ts, end_ts],
+                'autorange': False
+            })
+
+        # Ensure yaxis autorange for price trace (row 1)
+        fig['layout']['yaxis']['autorange'] = True
+
+        return fig
+
+    raise PreventUpdate
+
+
+
 @callback(
     Output('graph', 'extendData'),
-    Output('candle-index', 'data'),
-    Input('interval-component', 'n_intervals'),
-    State('chart-visible', 'data'),
+    Input('candle-index', 'data'),
     State('current-stock-ohlcv', 'data'),
-    State('candle-index', 'data')
+    prevent_initial_call=True
 )
-def extend_chart(n_intervals, visible, data, idx):
-    if not visible or not data or idx is None:
-        return no_update, idx
+def extend_chart(idx, data):
+    if not data or idx is None or idx < 0:
+        raise PreventUpdate
 
-    timestamps = data['timestamp']
-    opens = data['open']
-    highs = data['high']
-    lows = data['low']
-    closes = data['close']
+    if idx >= len(data['timestamp']):
+        return no_update
 
-    if idx >= len(timestamps):
-        return no_update, idx
+    # Extract data point at index
+    ts = pd.to_datetime(data['timestamp'][idx])
+    o = data['open'][idx]
+    h = data['high'][idx]
+    l = data['low'][idx]
+    c = data['close'][idx]
 
     new_data = {
-        'x': [[timestamps[idx]]],
-        'open': [[opens[idx]]],
-        'high': [[highs[idx]]],
-        'low': [[lows[idx]]],
-        'close': [[closes[idx]]],
+        'x': [[ts]],
+        'open': [[o]],
+        'high': [[h]],
+        'low': [[l]],
+        'close': [[c]]
     }
 
-    return [new_data, [0]], idx + 1
+    return new_data, [0]
+
+@callback(
+    Output('graph', 'extendData', allow_duplicate=True),
+    Input('candle-index', 'data'),
+    State('current-stock-ohlcv', 'data'),
+    prevent_initial_call=True
+)
+def extend_volume_bar(idx, data):
+    if not data or idx is None or idx < 0:
+        raise PreventUpdate
+
+    if idx >= len(data['timestamp']):
+        return no_update
+
+    ts = pd.to_datetime(data['timestamp'][idx])
+    v = data['volume'][idx]   
+    new_data = {
+        'x': [[ts]],  
+        'y': [[v]] ,
+        
+    }
+    return new_data, [1]
 
 
 @callback(
@@ -118,14 +210,13 @@ def extend_chart(n_intervals, visible, data, idx):
     Input('candle-index', 'data')
 )
 def update_text(data, idx):
-    if not data:
+    if not data or idx < 0:
         return no_update
-    
-    idx-=1
+
     
     timestamps = data['timestamp']
     if idx >= len(timestamps):
-        return no_update, idx
+        return no_update
     
 
     ts = data["timestamp"][idx]
@@ -133,54 +224,8 @@ def update_text(data, idx):
     h = data["high"][idx]
     l = data["low"][idx]
     c = data["close"][idx]
+    vol = data['volume'][idx]
     
-    return f"{ts} | O:{o} H:{h} L:{l} C:{c}"
+    return f"{ts} | O:{o} H:{h} L:{l} C:{c} VOL:{vol}"
 
-@callback( 
-    Output('graph', 'figure', allow_duplicate=True),
-    State('current-stock-ohlcv', 'data'),
-    Input('candle-index', 'data'),
-    State('graph', 'figure'),
-    prevent_initial_call=True
-)
-def update_xaxis(json_dict, idx, fig):
 
-    if idx is None or json_dict is None or len(json_dict) == 0 or not fig:
-        raise PreventUpdate
-    
-    if idx >= len(json_dict['timestamp']):
-        raise PreventUpdate
-
-    timestamps = json_dict['timestamp']
-    start_datetime = pd.to_datetime(timestamps[0])
-    current_ts = pd.to_datetime(timestamps[idx])
-
-    if current_ts.minute % 30 == 0 and current_ts.second == 0 or idx == 1:
-        end_datetime = current_ts + timedelta(minutes=30)
-        
-        fig['layout']['xaxis']['range'] = [start_datetime, end_datetime]
-        fig['layout']['yaxis']['autorange'] = True
-
-        return fig
-    raise PreventUpdate
-
-    
-
-@callback(
-    Output('candle-index', 'data', allow_duplicate = True),
-    Input('interval-component', 'n_intervals'),
-    prevent_initial_call = True
-)
-def update_candle_idx(n):
-    return n
-
-@callback(
-    Output('chart-visible', 'data'),
-    Input('show-chart-btn', 'n_clicks'),
-    State('chart-visible', 'data'),
-    prevent_initial_call=True
-)
-def toggle_chart_visibility(n_clicks, current_state):
-    if current_state is None:
-        return True  
-    return not current_state 

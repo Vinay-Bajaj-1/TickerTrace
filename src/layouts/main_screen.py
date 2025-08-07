@@ -1,7 +1,7 @@
 from dash import html, dcc
 import dash_mantine_components as dmc
 
-left_side = [
+right_side = [
     dmc.Alert(
         id="alert-warning",
         title="Alert!",
@@ -13,7 +13,7 @@ left_side = [
     dmc.Stack(
         children = [
             dmc.Text("No data to show...", id = 'ohlc-text'),
-            dcc.Graph(id="graph")
+            dcc.Graph(id='graph')  
         ] 
     )     
 ]

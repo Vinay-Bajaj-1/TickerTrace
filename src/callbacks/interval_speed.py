@@ -7,5 +7,5 @@ from dash import Input, Output, callback
 )
 def update_interval_speed(selected_speed):
     if selected_speed is None:
-        return 1000  # default 1 second
+        return 1000 
     return int(selected_speed)

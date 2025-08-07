@@ -48,8 +48,7 @@ nav_layout = [
         data = app_state.speed_options, 
         value = '1000',
         mb = 20
-    ),
-    dmc.Button("Show Chart", id="show-chart-btn", variant="light", mt=10),
+    )
 
 
 

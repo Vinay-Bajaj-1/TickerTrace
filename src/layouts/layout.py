@@ -2,7 +2,7 @@ import dash
 from dash import html, dcc
 import dash_mantine_components as dmc
 from src.layouts.navbar import nav_layout
-from src.layouts.main_screen import left_side
+from src.layouts.main_screen import right_side
 
 from src.callbacks import charting
 from src.callbacks import collapse_navbar
@@ -54,9 +54,8 @@ final_layout = dmc.AppShell(
             p='md',
         ),
         dmc.AppShellMain(
-            left_side,  
+            right_side,  
         ),
-        dcc.Store(id='chart-visible', data=False),
         dcc.Store(id='candle-index', data=0),
         dcc.Store('current-stock-ohlcv', data = None),
         dcc.Store('is-running', data = False),
