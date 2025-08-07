@@ -6,12 +6,15 @@ app_state = AppState()
 
 @callback(
     Output('current-stock-ohlcv', 'data'),
+    Output('interval-component', 'n_intervals'),
+    Output('candle-index', 'data', allow_duplicate=True),
     Input('stock-select', 'value'),
-    Input('date-select', 'value')
+    Input('date-select', 'value'),
+    prevent_initial_call = True
 
 )
 def load_stock_ohlcv(stock, date):
     if date is None or stock is None:
-        return no_update
+        return no_update, no_update, no_update
     json_data = app_state.load_ohlcv(date, stock)
-    return json_data
+    return json_data, 0,0

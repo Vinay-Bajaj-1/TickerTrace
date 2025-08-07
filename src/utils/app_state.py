@@ -16,8 +16,7 @@ class AppState:
             {"label": "1 second", "value": '1000'},
             {"label": "0.75 seconds", "value": '750'},
             {"label": "0.5 seconds", "value": '500'},
-            {"label": "0.25 seconds", "value": '250'},
-            {"label": "0.15 seconds", "value": '150'},
+            {"label": "0.25 seconds", "value": '250'}
         ]
 
 

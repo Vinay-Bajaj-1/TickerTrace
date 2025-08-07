@@ -40,3 +40,11 @@ def is_running(start_btn, stop_btn, is_running_state, stock, date):
 )
 def toggle_interval(is_running):
     return not is_running
+
+
+@callback(
+    Output('candle-index', 'data'),
+    Input('interval-component', 'n_intervals')
+)
+def update_candle_index(n):
+    return n-1
