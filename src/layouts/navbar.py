@@ -38,22 +38,38 @@ nav_layout = [
         children = [
             dmc.Button('Start', variant = 'filled', id = 'start-button', fullWidth = True, n_clicks = 0, mb = 20),
             dmc.Button('Stop', variant = 'filled', id = 'stop-button', fullWidth = True,  n_clicks = 0, mb = 20),
+            dmc.Button('Reset', variant = 'filled', id = 'reset-button', fullWidth = True,  n_clicks = 0, mb = 20),
+
         ], 
         justify = 'center'
     ),
 
-    dmc.Select(
-        label = 'Select speed',
-        id = 'speed-select',
-        data = app_state.speed_options, 
-        value = '1000',
-        mb = 20
+    dmc.Group(
+        grow=False,
+        justify="center",
+        gap="md",  # space between them
+        style={"flexWrap": "nowrap"},  # prevent wrapping to the next line
+        children=[
+            dmc.Select(
+                label="Select speed",
+                id="speed-select",
+                data=app_state.speed_options, 
+                value="1000",
+                mb=20,
+                style={"width": 200} 
+            ),
+            dmc.Select(
+                label="Resample",
+                id="resample",
+                data=app_state.resample,
+                searchable=False,
+                mb=20,
+                value="1min",
+                allowDeselect=False,
+                style={"width": 200} 
+            )
+        ]
     )
-
-
-
-    
-
 
    
 

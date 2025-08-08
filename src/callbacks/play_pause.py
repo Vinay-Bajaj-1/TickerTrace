@@ -1,6 +1,8 @@
 from dash import Input, Output, State, callback, no_update
 import dash
- 
+from src.utils.app_state import AppState
+import plotly.graph_objects as go
+app_state = AppState()
 
 @callback(
     Output('is-running', 'data'),
@@ -40,6 +42,19 @@ def is_running(start_btn, stop_btn, is_running_state, stock, date):
 )
 def toggle_interval(is_running):
     return not is_running
+
+
+@callback(
+    Output('graph', 'figure', allow_duplicate=True),
+    Output('interval-component', 'n_intervals', allow_duplicate=True),
+    Output('candle-index', 'data', allow_duplicate=True),
+    Output('is-running', 'data', allow_duplicate=True),
+    Output('ohlc-text', 'children', allow_duplicate=True),
+    Input('reset-button', 'n_clicks'),
+    prevent_initial_call = True
+)
+def rest_simulation(n_clicks):
+    return go.Figure(), 0, 0, False, 'No data to show...'
 
 
 @callback(

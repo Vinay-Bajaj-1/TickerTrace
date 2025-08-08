@@ -1,6 +1,9 @@
 from src.database.clickhouse import ClickHouseDataFetcher
-import pandas as pd
+
 from datetime import timedelta
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 class AppState:
     _instance = None
 
@@ -18,6 +21,55 @@ class AppState:
             {"label": "0.5 seconds", "value": '500'},
             {"label": "0.25 seconds", "value": '250'}
         ]
+
+        self.resample = [
+            {"label": "1 min", "value": '1min'},
+            {"label": "5 min", "value": '5min'},
+            {"label": "10 min", "value": '10min'},
+            {"label": "15 min", "value": '15min'},
+            {"label": "30 min", "value": '30min'},
+            {"label": "1 hour", "value": '1h'},
+
+        ]
+        self.initial_chart = go.Figure(
+                make_subplots(
+                    rows=2, cols=1,
+                    shared_xaxes=True,
+                    row_heights=[0.7, 0.3],
+                    vertical_spacing=0.05,
+                    specs=[[{"type": "candlestick"}], [{"type": "bar"}]]
+                )
+            )
+        
+        self.RESAMPLE_TO_MINUTES = {
+                "1min": 1,
+                "5min": 5,
+                "10min": 10,
+                "15min": 15,
+                "30min": 30,
+                "1h": 60
+            }
+        
+        self.initial_chart.add_trace(
+            go.Candlestick(
+                x=[],
+                open=[],
+                high=[],
+                low=[],
+                close=[],
+                increasing_line_color='green',
+                decreasing_line_color='red'
+            ),
+            row=1, col=1
+        )
+        self.initial_chart.add_trace(
+            go.Bar(
+                x=[],
+                y=[],
+                name='Volume',
+            ),
+            row=2, col=1
+        )
 
 
     def prepare_stock_list(self):
@@ -53,10 +105,9 @@ class AppState:
 
     
 
-    def load_ohlcv(self, date, ticker):
+    def load_ohlcv(self, date, ticker, interval = '1min'):
         clickhouse_obj  = ClickHouseDataFetcher()
-
-        df = clickhouse_obj.fetch_data(date, date, ticker, interval='1min')
+        df = clickhouse_obj.fetch_data(date, date, ticker, interval=interval)
         df['timestamp'] = df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')  
         clickhouse_obj.client.close()
 
