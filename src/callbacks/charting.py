@@ -5,17 +5,20 @@ from dash import Output, Input, callback, State, no_update
 from dash.exceptions import PreventUpdate
 from datetime import timedelta, time
 
+from src.utils.app_state import AppState
+app_state = AppState()
+
 @callback(
     Output('graph', 'figure'),
     Input('current-stock-ohlcv', 'data'),
-    State('candle-index', 'data'),
+    Input('candle-index', 'data'),
     Input('stock-select', 'value'),
+    
 
     prevent_initial_call=True
 )
 def initialize_graph(data, idx, stock_name):
-
-    if not data:
+    if not data or idx > 0:
         raise PreventUpdate
 
     fig = go.Figure(
@@ -115,9 +118,10 @@ def initialize_graph(data, idx, stock_name):
     State('current-stock-ohlcv', 'data'),
     Input('candle-index', 'data'),
     State('graph', 'figure'),
+    State('resample', 'value'),
     prevent_initial_call=True
 )
-def update_xaxis(json_dict, idx, fig):
+def update_xaxis(json_dict, idx, fig, resample):
     if idx is None or idx < 0 or not json_dict or not fig:
         raise PreventUpdate
 
@@ -125,13 +129,19 @@ def update_xaxis(json_dict, idx, fig):
     if not timestamps or idx >= len(timestamps):
         raise PreventUpdate
 
+    # Convert resample string to minutes
+    minutes_per_bar = app_state.RESAMPLE_TO_MINUTES[resample]
+
+    # Define how often to update and how much to zoom
+    update_interval = 30 if minutes_per_bar == 1 else minutes_per_bar * 12
+    zoom_window = update_interval  
+
     current_ts = pd.to_datetime(timestamps[idx])
     start_ts = pd.to_datetime(timestamps[0])
 
-    if (current_ts.minute % 30 == 0 and current_ts.second == 0) or idx == 0:
-        end_ts = current_ts + timedelta(minutes=30)
+    if (current_ts.minute % update_interval == 0 and current_ts.second == 0) or idx == 0:
+        end_ts = current_ts + timedelta(minutes=zoom_window)
 
-        # Update range for both xaxes in subplots
         fig['layout']['xaxis'].update({
             'range': [start_ts, end_ts],
             'autorange': False
@@ -142,12 +152,11 @@ def update_xaxis(json_dict, idx, fig):
                 'autorange': False
             })
 
-        # Ensure yaxis autorange for price trace (row 1)
         fig['layout']['yaxis']['autorange'] = True
-
         return fig
 
     raise PreventUpdate
+
 
 
 

@@ -1,4 +1,4 @@
-from dash import html, dcc
+from dash import dcc
 import dash_mantine_components as dmc
 
 right_side = [
