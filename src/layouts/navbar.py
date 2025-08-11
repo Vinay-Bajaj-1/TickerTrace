@@ -28,8 +28,6 @@ nav_layout = [
                 )
             ] 
         ),
-        dcc.Store('selected-date', data = None),
-        dcc.Store('selected-stock', data = None),
     ]),
 
     

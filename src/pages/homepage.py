@@ -12,8 +12,9 @@ from src.callbacks import play_pause
 from src.callbacks import show_date
 
 
+dash.register_page(__name__, path='/') 
 
-final_layout = dmc.AppShell(
+layout = dmc.AppShell(
     [
         dmc.AppShellHeader(
             dmc.Group(
@@ -56,12 +57,6 @@ final_layout = dmc.AppShell(
         dmc.AppShellMain(
             right_side,  
         ),
-        dcc.Store(id='candle-index', data=0),
-        dcc.Store('current-stock-ohlcv', data = None),
-        dcc.Store('is-running', data = False),
-        dcc.Interval(id='interval-component',interval=1000, n_intervals=0),
-
-
     ],
     header={'height': 75},
     navbar={
@@ -72,4 +67,3 @@ final_layout = dmc.AppShell(
     padding="md",
     id="appshell",
 )
-layout = dmc.MantineProvider(final_layout)
