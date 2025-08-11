@@ -15,6 +15,12 @@ class AppState:
     
     def _initialize(self):
         self.list_of_all_stocks = self.prepare_stock_list()
+
+        self.pages_options = [
+            {"label": "Homepage", "value": "homepage"},
+            {"label": "Ranking Table", "value": "ranking"}
+        ]
+        
         self.speed_options = [
             {"label": "1 second", "value": '1000'},
             {"label": "0.75 seconds", "value": '750'},

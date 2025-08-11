@@ -6,6 +6,16 @@ app_state = AppState()
 
 
 nav_layout = [
+    #page select
+    dmc.Select(
+        id = 'page-selector',
+        label = 'Page',
+        data = app_state.pages_options,
+        value = 'homepage',
+        allowDeselect = False,
+        mb = 20
+    ),
+
     #stock select
     dmc.Center([
         dmc.Group(
@@ -67,8 +77,6 @@ nav_layout = [
                 style={"width": 200} 
             )
         ]
-    )
-
-   
+    ),
 
 ]

@@ -1,18 +1,14 @@
 import dash
-from dash import html, dcc
+from dash import html, Output, Input, callback
 import dash_mantine_components as dmc
 from src.layouts.navbar import nav_layout
-from src.layouts.main_screen import right_side
-
-from src.callbacks import charting
-from src.callbacks import collapse_navbar
-from src.callbacks import current_stock_data
-from src.callbacks import interval_speed
-from src.callbacks import play_pause
-from src.callbacks import show_date
 
 
-dash.register_page(__name__, path='/') 
+from src.layouts.main_screen import right_side 
+from src.pages.table_ranking import ranking_content  
+
+
+dash.register_page(__name__, path='/')
 
 layout = dmc.AppShell(
     [
@@ -26,7 +22,7 @@ layout = dmc.AppShell(
                         opened=True,
                         style={"marginLeft": "16px"},
                     ),
-                    dmc.Box(style={"flexGrow": 1}),  
+                    dmc.Box(style={"flexGrow": 1}),
                     dmc.Title(
                         "TickerTrace",
                         c="blue",
@@ -37,13 +33,13 @@ layout = dmc.AppShell(
                             "marginBottom": "0",
                         }
                     ),
-                    dmc.Box(style={"flexGrow": 1}),  
+                    dmc.Box(style={"flexGrow": 1}),
                 ],
-                align="center",      
-                justify="center",   
+                align="center",
+                justify="center",
                 style={
                     "width": "100%",
-                    "height": "100%",     
+                    "height": "100%",
                     "paddingTop": "16px",
                     "paddingBottom": "16px",
                 },
@@ -55,7 +51,8 @@ layout = dmc.AppShell(
             p='md',
         ),
         dmc.AppShellMain(
-            right_side,  
+            id="main-content",  # make this a container to update dynamically
+            children=right_side,  # default content (homepage)
         ),
     ],
     header={'height': 75},
@@ -67,3 +64,13 @@ layout = dmc.AppShell(
     padding="md",
     id="appshell",
 )
+
+@callback(
+    Output('main-content', 'children'),
+    Input('page-selector', 'value')
+)
+def switch_main_content(selected_page):
+    if selected_page == "ranking":
+        return ranking_content  
+    else:
+        return right_side 
